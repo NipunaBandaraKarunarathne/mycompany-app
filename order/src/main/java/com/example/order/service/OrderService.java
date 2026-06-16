@@ -14,6 +14,8 @@ import com.example.order.model.Orders;
 
 import jakarta.transaction.Transactional;
 
+import com.example.inventory.dto.InventoryDTO;
+
 @Service
 @Transactional
 public class OrderService {
@@ -36,21 +38,49 @@ public class OrderService {
     }
 
     public OrderDTO saveOrder(OrderDTO orderDTO) {
+
         Integer itemId = orderDTO.getItemId();
 
+        InventoryDTO inventoryResponse;
+
         try {
-            webClient.get()
-                    .uri("http://localhost:8081/api/v1/inventory/{itemId}")
+            inventoryResponse = webClient.get()
+                    .uri(uriBuilder -> uriBuilder.path("http://localhost:8080/api/v1/inventory/{itemId}").build(itemId))
                     .retrieve()
-                    .bodyToMono(String.class)
+                    .bodyToMono(InventoryDTO.class)
                     .block();
+
         } catch (Exception e) {
-            throw new RuntimeException("Failed to fetch inventory data for item ID: " + itemId, e);
+            throw new RuntimeException(
+                    "Failed to fetch inventory data for item ID: " + itemId, e);
         }
 
-        orderRepo.save(modelMapper.map(orderDTO, Orders.class));
-        return orderDTO;
+        assert inventoryResponse != null;
 
+        if(inventoryResponse.getQuantity()>0){
+
+            orderRepo.save(modelMapper.map(orderDTO, Orders.class));
+            return orderDTO;
+
+
+        }
+        else{
+            throw new RuntimeException("Item is out of stock: " + itemId);
+        }
+
+        // if (inventoryResponse == null) {
+        //     throw new RuntimeException("Inventory not found for item ID: " + itemId);
+        // }
+
+        // if (inventoryResponse.getQuantity() <= 0) {
+        //     throw new RuntimeException("Item is out of stock: " + itemId);
+        // }
+
+        // save order
+       // Orders order = modelMapper.map(orderDTO, Orders.class);
+      //  Orders savedOrder = orderRepo.save(order);
+
+       // return modelMapper.map(savedOrder, OrderDTO.class);
     }
 
     public OrderDTO getOrderById(Integer orderId) {
