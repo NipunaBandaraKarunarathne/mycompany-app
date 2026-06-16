@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.order.common.orderResponse;
 import com.example.order.dto.OrderDTO;
 import com.example.order.service.OrderService;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,7 +33,7 @@ public class OrderController {
     }
 
       @PostMapping("/addorder")
-    public OrderDTO addOrder(@RequestBody OrderDTO orderDTO) {
+    public orderResponse addOrder(@RequestBody OrderDTO orderDTO) {
 
         return orderService.saveOrder(orderDTO);
     }

@@ -8,6 +8,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import com.example.order.common.ErrorOrderResponse;
+import com.example.order.common.SuccessOrderResponse;
+import com.example.order.common.orderResponse;
 import com.example.order.dto.OrderDTO;
 import com.example.order.repo.OrderRepo;
 import com.example.order.model.Orders;
@@ -27,8 +30,10 @@ public class OrderService {
     @Autowired
     private ModelMapper modelMapper;
 
-    public OrderService(WebClient webClient) {
-        this.webClient = webClient;
+    public OrderService(WebClient.Builder webClientBuilder, ModelMapper modelMapper, OrderRepo orderRepo) {
+        this.webClient = webClientBuilder.baseUrl("http://localhost:8080/api/v1").build();
+        this.modelMapper = modelMapper;
+        this.orderRepo = orderRepo;
     }
 
     public List<OrderDTO> getOrders() {
@@ -37,7 +42,7 @@ public class OrderService {
         }.getType());
     }
 
-    public OrderDTO saveOrder(OrderDTO orderDTO) {
+    public orderResponse saveOrder(OrderDTO orderDTO) {
 
         Integer itemId = orderDTO.getItemId();
 
@@ -45,7 +50,7 @@ public class OrderService {
 
         try {
             inventoryResponse = webClient.get()
-                    .uri(uriBuilder -> uriBuilder.path("http://localhost:8080/api/v1/inventory/{itemId}").build(itemId))
+                    .uri(uriBuilder -> uriBuilder.path("/inventory/{itemId}").build(itemId))
                     .retrieve()
                     .bodyToMono(InventoryDTO.class)
                     .block();
@@ -60,27 +65,15 @@ public class OrderService {
         if(inventoryResponse.getQuantity()>0){
 
             orderRepo.save(modelMapper.map(orderDTO, Orders.class));
-            return orderDTO;
+            return new SuccessOrderResponse(orderDTO);
 
 
         }
         else{
-            throw new RuntimeException("Item is out of stock: " + itemId);
+            return new ErrorOrderResponse("Item is out of stock: " + itemId);
         }
 
-        // if (inventoryResponse == null) {
-        //     throw new RuntimeException("Inventory not found for item ID: " + itemId);
-        // }
-
-        // if (inventoryResponse.getQuantity() <= 0) {
-        //     throw new RuntimeException("Item is out of stock: " + itemId);
-        // }
-
-        // save order
-       // Orders order = modelMapper.map(orderDTO, Orders.class);
-      //  Orders savedOrder = orderRepo.save(order);
-
-       // return modelMapper.map(savedOrder, OrderDTO.class);
+       
     }
 
     public OrderDTO getOrderById(Integer orderId) {
@@ -99,3 +92,4 @@ public class OrderService {
     }
 
 }
+
